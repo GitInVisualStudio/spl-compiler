@@ -50,120 +50,140 @@ terminal Integer INTLIT;      //Integer literals
 
 /* Non-terminals */
 non terminal Program program;
-non terminal procDef;
-non terminal statementList;
-non terminal statement;
-non terminal closedStatement;
-non terminal openStatement;
-non terminal simpleStatement;
-non terminal procCall;
-non terminal argumentList;
-non terminal assign;
-non terminal expression;
-non terminal equalityExpression;
-non terminal relationalExpression;
-non terminal additiveExpression;
-non terminal term;
-non terminal factor;
-non terminal unaryOp;
-non terminal variable;
-non terminal declarationList;
-non terminal declaration;
-non terminal parameterList;
-non terminal parameter;
-non terminal typeDef;
-non terminal type;
+non terminal List<GlobalDeclaration> globalDeclarationList;
+non terminal GlobalDeclaration globalDeclaration;
+non terminal ProcedureDeclaration procedureDeclaration;
+non terminal List<Statement> statementList;
+non terminal Statement statement;
+non terminal Statement closedStatement;
+non terminal Statement openStatement;
+non terminal Statement simpleStatement;
+non terminal CompoundStatement compoundStatement;
+non terminal CallStatement callStatement;
+non terminal List<Expression> argumentList;
+non terminal AssignStatement assignStatement;
+non terminal Expression expression;
+non terminal Expression equalityExpression;
+non terminal Expression relationalExpression;
+non terminal Expression additiveExpression;
+non terminal Expression term;
+non terminal Expression factor;
+non terminal Expression intLiteral;
+non terminal UnaryExpression unaryExpression;
+non terminal Variable variable;
+non terminal NamedVariable namedVariable;
+non terminal ArrayAccess arrayAccess;
+non terminal List<VariableDeclaration> declarationList;
+non terminal VariableDeclaration variableDeclaration;
+non terminal List<ParameterDeclaration> parameterList;
+non terminal ParameterDeclaration parameterDeclaration;
+non terminal TypeDeclaration typeDeclaration;
+non terminal TypeExpression typeExpression;
+non terminal NamedTypeExpression namedTypeExpression;
+non terminal ArrayTypeExpression arrayTypeExpression;
 non terminal empty;
 
 start with program;
 
-program ::= procDef program
-            | typeDef program
-            | procDef;
+program ::= globalDeclarationList:list {:RESULT = new Program(new Position(listleft, listright), list);:};
 
-procDef ::= PROC IDENT LPAREN parameterList RPAREN LCURL declarationList statementList RCURL
-            | PROC IDENT LPAREN RPAREN LCURL declarationList statementList RCURL;
+globalDeclarationList ::= globalDeclaration:head globalDeclarationList:tail {:RESULT=cons(head, tail);:}
+                            | globalDeclaration:head {:RESULT=cons(head, nil());:};
+globalDeclaration ::= procedureDeclaration:procedure {:RESULT = procedure;:}
+                        | typeDeclaration:type {:RESULT = type;:};
+
+procedureDeclaration ::= PROC IDENT:name LPAREN parameterList:parameter RPAREN LCURL declarationList:variables statementList:body RCURL {:RESULT = new ProcedureDeclaration(new Position(nameleft, nameright), name, parameter, variables, body);:}
+            | PROC IDENT:name LPAREN RPAREN LCURL declarationList:variables statementList:body RCURL  {:RESULT = new ProcedureDeclaration(new Position(nameleft, nameright), name, nil(), variables, body);:};
 
 
-procCall ::= IDENT LPAREN argumentList RPAREN SEMIC
-            | IDENT LPAREN RPAREN SEMIC;
-
-argumentList ::= expression COMMA argumentList
-                | expression;
-
-statementList ::= statement statementList
-                    | empty;
+statementList ::= statement:head statementList:tail {:RESULT = cons(head, tail);:}
+                    | empty {:RESULT = nil();:};
 
 // solve dangling else problem: https://en.wikipedia.org/wiki/Dangling_else
-statement ::= openStatement
-                | closedStatement
-                | LCURL statementList RCURL;
+statement ::= openStatement:open {:RESULT = open;:}
+                | closedStatement:closed {:RESULT = closed;:}
+                | compoundStatement:compound {:RESULT = compound;:};
 
-openStatement ::= IF LPAREN expression RPAREN simpleStatement
-                    | IF LPAREN expression RPAREN LCURL statementList RCURL
-                    | IF LPAREN expression RPAREN LCURL statementList RCURL ELSE openStatement
-                    | IF LPAREN expression RPAREN openStatement
-                    | IF LPAREN expression RPAREN closedStatement ELSE openStatement
-                    | WHILE LPAREN expression RPAREN openStatement;
+compoundStatement ::= LCURL statementList:list RCURL {:RESULT = new CompoundStatement(new Position(listleft, listright), list);:};
 
-closedStatement ::= simpleStatement
-                    | IF LPAREN expression RPAREN closedStatement ELSE closedStatement
-                    | IF LPAREN expression RPAREN closedStatement ELSE LCURL statementList RCURL
-                    | IF LPAREN expression RPAREN LCURL statementList RCURL ELSE closedStatement
-                    | IF LPAREN expression RPAREN LCURL statementList RCURL ELSE LCURL statementList RCURL
-                    | WHILE LPAREN expression RPAREN closedStatement
-                    | WHILE LPAREN expression RPAREN LCURL statementList RCURL;
+openStatement ::= IF LPAREN expression:condition RPAREN simpleStatement:body {:RESULT = new IfStatement(new Position(conditionleft, conditionright), condition, body, new EmptyStatement(new Position(conditionleft, conditionright)));:}
+                    | IF LPAREN expression:condition RPAREN compoundStatement:body {:RESULT = new IfStatement(new Position(conditionleft, conditionright), condition, body, new EmptyStatement(new Position(conditionleft, conditionright)));:}
+                    | IF LPAREN expression:condition RPAREN compoundStatement:body ELSE openStatement:elseBody {:RESULT = new IfStatement(new Position(conditionleft, conditionright), condition, body, elseBody);:}
+                    | IF LPAREN expression:condition RPAREN openStatement:body {:RESULT = new IfStatement(new Position(conditionleft, conditionright), condition, body, new EmptyStatement(new Position(conditionleft, conditionright)));:}
+                    | IF LPAREN expression:condition RPAREN closedStatement:body ELSE openStatement:elseBody {:RESULT = new IfStatement(new Position(conditionleft, conditionright), condition, body, elseBody);:}
+                    | WHILE LPAREN expression:condition RPAREN openStatement:body {:RESULT = new WhileStatement(new Position(conditionleft, conditionright), condition, body);:};
 
-simpleStatement ::= assign
-                    | procCall
-                    | SEMIC;
+closedStatement ::= simpleStatement:statement {:RESULT = statement;:}
+                    | IF LPAREN expression:condition RPAREN closedStatement:body ELSE closedStatement:elseBody {:RESULT = new IfStatement(new Position(conditionleft, conditionright), condition, body, elseBody);:}
+                    | IF LPAREN expression:condition RPAREN closedStatement:body ELSE compoundStatement:elseBody {:RESULT = new IfStatement(new Position(conditionleft, conditionright), condition, body, elseBody);:}
+                    | IF LPAREN expression:condition RPAREN compoundStatement:body ELSE closedStatement:elseBody {:RESULT = new IfStatement(new Position(conditionleft, conditionright), condition, body, elseBody);:}
+                    | IF LPAREN expression:condition RPAREN compoundStatement:body ELSE compoundStatement:elseBody {:RESULT = new IfStatement(new Position(conditionleft, conditionright), condition, body, elseBody);:}
+                    | WHILE LPAREN expression:condition RPAREN closedStatement:body {:RESULT = new WhileStatement(new Position(conditionleft, conditionright), condition, body);:}
+                    | WHILE LPAREN expression:condition RPAREN compoundStatement:body {:RESULT = new WhileStatement(new Position(conditionleft, conditionright), condition, body);:};
 
-assign ::= variable ASGN expression SEMIC;
+simpleStatement ::= assignStatement:assign {:RESULT = assign;:}
+                    | callStatement:call {:RESULT = call;:}
+                    | SEMIC:semic {:RESULT = new EmptyStatement(new Position(semicleft, semicright));:};
 
-expression ::= equalityExpression;
+assignStatement ::= variable:target ASGN:asgn expression:value SEMIC {:RESULT = new AssignStatement(new Position(asgnleft, asgnright), target, value);:};
 
-equalityExpression ::= relationalExpression
-                        | relationalExpression EQ equalityExpression
-                        | relationalExpression NE equalityExpression;
+callStatement ::= IDENT:name LPAREN argumentList:arguments RPAREN SEMIC {:RESULT = new CallStatement(new Position(nameleft, nameright), name, arguments);:}
+            | IDENT:name LPAREN RPAREN SEMIC {:RESULT = new CallStatement(new Position(nameleft, nameright), name, nil());:};
 
-relationalExpression ::= additiveExpression
-                        | additiveExpression LT relationalExpression
-                        | additiveExpression LE relationalExpression
-                        | additiveExpression GT relationalExpression
-                        | additiveExpression GE relationalExpression;
+argumentList ::= expression:head COMMA argumentList:tail {:RESULT= cons(head, tail);:}
+                | expression:head {:RESULT= cons(head, nil());:};
+expression ::= equalityExpression:expr {:RESULT = expr;:};
 
-additiveExpression ::= term
-                | term PLUS additiveExpression
-                | term MINUS additiveExpression;
+equalityExpression ::= relationalExpression:expr {:RESULT = expr;:}
+                        | equalityExpression:lop EQ:op relationalExpression:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.EQU, lop, rop);:}
+                        | equalityExpression:lop NE:op relationalExpression:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.NEQ, lop, rop);:};
 
-term ::= factor
-        | factor STAR term
-        | factor SLASH term;
+relationalExpression ::= additiveExpression:expr {:RESULT = expr;:}
+                        | relationalExpression:lop LT:op additiveExpression:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.LST, lop, rop);:}
+                        | relationalExpression:lop LE:op additiveExpression:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.LSE, lop, rop);:}
+                        | relationalExpression:lop GT:op additiveExpression:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.GRT, lop, rop);:}
+                        | relationalExpression:lop GE:op additiveExpression:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.GRE, lop, rop);:};
 
-factor ::= LPAREN expression RPAREN
-            | unaryOp factor
-            | INTLIT
-            | variable;
+additiveExpression ::= term:expr {:RESULT = expr;:}
+                | additiveExpression:lop PLUS:op term:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.ADD, lop, rop);:}
+                | additiveExpression:lop MINUS:op term:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.SUB, lop, rop);:};
 
-unaryOp ::= MINUS;
+term ::= factor:expr {:RESULT = expr;:}
+        | term:lop STAR:op factor:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.MUL, lop, rop);:}
+        | term:lop SLASH:op factor:rop {:RESULT = new BinaryExpression(new Position(opleft, opright), BinaryExpression.Operator.DIV, lop, rop);:};
 
-variable ::= IDENT
-            | variable LBRACK expression RBRACK;
+factor ::= LPAREN expression:expr RPAREN {:RESULT = expr;:}
+            | unaryExpression:expr {:RESULT = expr;:}
+            | intLiteral:expr {:RESULT = expr;:}
+            | variable:variable {:RESULT = new VariableExpression(new Position(variableleft, variableright), variable);:};
 
-declarationList ::= declaration declarationList
-                    | empty;
+intLiteral ::= INTLIT:value {:RESULT = new IntLiteral(new Position(valueleft, valueright), value);:};
 
-declaration ::= VAR IDENT COLON type SEMIC;
+unaryExpression ::= MINUS:op factor:operand {:RESULT = new UnaryExpression(new Position(opleft, opright), UnaryExpression.Operator.MINUS, operand);:};
 
-parameterList ::= parameter COMMA parameterList
-                    | parameter;
+variable ::= namedVariable:named {:RESULT = named;:}
+            | arrayAccess:array {:RESULT = array;:};
 
-parameter ::= IDENT COLON type
-            | REF IDENT COLON type;
+namedVariable ::= IDENT:name {:RESULT = new NamedVariable(new Position(nameleft, nameright), name);:};
+arrayAccess ::= variable:array LBRACK expression:index RBRACK {:RESULT = new ArrayAccess(new Position(arrayleft, arrayright), array, index);:};
 
-typeDef ::= TYPE IDENT EQ type SEMIC;
+declarationList ::= variableDeclaration:head declarationList:tail {:RESULT = cons(head, tail);:}
+                    | empty {:RESULT = nil();:};
 
-type ::= ARRAY LBRACK INTLIT RBRACK OF type
-        | IDENT;
+variableDeclaration ::= VAR IDENT:name COLON typeExpression:typeExpr SEMIC {:RESULT = new VariableDeclaration(new Position(nameleft, nameright), name, typeExpr);:};
+
+parameterList ::= parameterDeclaration:head COMMA parameterList:tail {:RESULT = cons(head, tail);:}
+                    | parameterDeclaration:head {:RESULT = cons(head, nil());:};
+
+parameterDeclaration ::= IDENT:name COLON typeExpression:typeExpr {:RESULT = new ParameterDeclaration(new Position(nameleft, nameright), name, typeExpr, false);:}
+            | REF IDENT:name COLON typeExpression:typeExpr {:RESULT = new ParameterDeclaration(new Position(nameleft, nameright), name, typeExpr, true);:};
+
+typeDeclaration ::= TYPE IDENT:name EQ typeExpression:expr SEMIC {:RESULT = new TypeDeclaration(new Position(nameleft, nameright), name, expr);:};
+
+typeExpression ::= arrayTypeExpression:array {:RESULT = array;:}
+        | namedTypeExpression:named {:RESULT = named;:};
+
+namedTypeExpression ::= IDENT:name {:RESULT = new NamedTypeExpression(new Position(nameleft, nameright), name);:};
+arrayTypeExpression ::= ARRAY:array LBRACK INTLIT:size RBRACK OF typeExpression:baseType {:RESULT = new ArrayTypeExpression(new Position(arrayleft, arrayright), size, baseType);:};
 
 empty ::= ;

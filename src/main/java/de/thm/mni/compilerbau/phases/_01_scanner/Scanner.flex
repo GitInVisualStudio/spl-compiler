@@ -68,15 +68,15 @@ of {return symbol(Sym.OF);}
 \} {return symbol(Sym.RCURL);}
 \[ {return symbol(Sym.LBRACK);}
 \] {return symbol(Sym.RBRACK);}
-\"\\n\" {return symbol(Sym.INTLIT, 10);}
+\'\\n\' {return symbol(Sym.INTLIT, 10);}
 \d+ {return symbol(Sym.INTLIT, Integer.parseInt(yytext()));}
 0x{H}+ {return symbol(Sym.INTLIT, Integer.parseInt(yytext().substring(2), 16));}
-'.*' {
+'.{1, 1}' {
           String inputString = yytext();
           inputString = inputString.substring(1, inputString.length() - 1);
           return symbol(Sym.INTLIT, (int)inputString.charAt(0));
       }
-{L}({L}|\d)* {return symbol(Sym.IDENT, yytext());}
+{L}({L}|\d)* {return symbol(Sym.IDENT, new Identifier(yytext()));}
 \s {}
 
 [^]		{throw SplError.IllegalCharacter(new Position(yyline + 1, yycolumn + 1), yytext().charAt(0));}
