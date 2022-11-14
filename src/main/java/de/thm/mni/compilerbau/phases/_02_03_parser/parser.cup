@@ -1,0 +1,169 @@
+package de.thm.mni.compilerbau.phases._02_03_parser;
+
+import java.util.List;
+import java.util.LinkedList;
+import java_cup.runtime.*;
+import de.thm.mni.compilerbau.phases._01_scanner.Scanner;
+import de.thm.mni.compilerbau.absyn.*;
+import de.thm.mni.compilerbau.table.Identifier;
+import de.thm.mni.compilerbau.utils.SplError;
+import de.thm.mni.compilerbau.CommandLineOptions;
+
+parser code {:
+  public CommandLineOptions options = null;
+
+  public void syntax_error(Symbol currentToken) {
+    throw SplError.SyntaxError(new Position(currentToken.left, currentToken.right), ((Scanner)getScanner()).yytext());
+  }
+  
+  /**
+   * @return An empty list. (Uses LinkedList)
+   */
+  public static <E> List<E> nil() {
+      return new LinkedList<E>();
+  }
+  
+  /**
+   * Constructs a list from a head and a tail without modifying the tail (Uses LinkedList).
+   * Use this as a helper if you don't want to deal with constructing lists manually.
+   *
+   * @param head The head of the list
+   * @param tail The tail of the list
+   * @return A list containing the head element and all elements of tail
+   */
+  public static <E> List<E> cons(E head, List<E> tail) {
+    List<E> copy = new LinkedList(tail);
+    copy.add(0, head);
+    return copy;
+  }
+:}
+
+/* Terminals/Tokens */
+terminal LBRACK, RBRACK, LPAREN, RPAREN, LCURL, RCURL;         //Braces, parenthesis, brackets
+terminal LT, LE, GT, GE, NE, EQ;                               //Comparison operators
+terminal PLUS, MINUS, STAR, SLASH;                             //Arithmetic operators
+terminal ASGN, COMMA, COLON, SEMIC;                            //Other delimiters
+terminal TYPE, PROC, ARRAY, OF, REF, VAR, IF, ELSE, WHILE;     //Keywords
+
+terminal Identifier IDENT;    //Identifiers
+terminal Integer INTLIT;      //Integer literals
+
+/* Non-terminals */
+non terminal Program program;
+non terminal procDef;
+non terminal statementList;
+non terminal statement;
+non terminal closedStatement;
+non terminal openStatement;
+non terminal simpleStatement;
+non terminal procCall;
+non terminal argumentList;
+non terminal assign;
+non terminal expression;
+non terminal equalityExpression;
+non terminal relationalExpression;
+non terminal additiveExpression;
+non terminal term;
+non terminal factor;
+non terminal unaryOp;
+non terminal variable;
+non terminal declarationList;
+non terminal declaration;
+non terminal parameterList;
+non terminal parameter;
+non terminal typeDef;
+non terminal type;
+non terminal empty;
+
+start with program;
+
+program ::= procDef program
+            | typeDef program
+            | procDef;
+
+procDef ::= PROC IDENT LPAREN parameterList RPAREN LCURL declarationList statementList RCURL
+            | PROC IDENT LPAREN RPAREN LCURL declarationList statementList RCURL;
+
+
+procCall ::= IDENT LPAREN argumentList RPAREN SEMIC
+            | IDENT LPAREN RPAREN SEMIC;
+
+argumentList ::= expression COMMA argumentList
+                | expression;
+
+statementList ::= statement statementList
+                    | empty;
+
+// solve dangling else problem: https://en.wikipedia.org/wiki/Dangling_else
+statement ::= openStatement
+                | closedStatement
+                | LCURL statementList RCURL;
+
+openStatement ::= IF LPAREN expression RPAREN simpleStatement
+                    | IF LPAREN expression RPAREN LCURL statementList RCURL
+                    | IF LPAREN expression RPAREN LCURL statementList RCURL ELSE openStatement
+                    | IF LPAREN expression RPAREN openStatement
+                    | IF LPAREN expression RPAREN closedStatement ELSE openStatement
+                    | WHILE LPAREN expression RPAREN openStatement;
+
+closedStatement ::= simpleStatement
+                    | IF LPAREN expression RPAREN closedStatement ELSE closedStatement
+                    | IF LPAREN expression RPAREN closedStatement ELSE LCURL statementList RCURL
+                    | IF LPAREN expression RPAREN LCURL statementList RCURL ELSE closedStatement
+                    | IF LPAREN expression RPAREN LCURL statementList RCURL ELSE LCURL statementList RCURL
+                    | WHILE LPAREN expression RPAREN closedStatement
+                    | WHILE LPAREN expression RPAREN LCURL statementList RCURL;
+
+simpleStatement ::= assign
+                    | procCall
+                    | SEMIC;
+
+assign ::= variable ASGN expression SEMIC;
+
+expression ::= equalityExpression;
+
+equalityExpression ::= relationalExpression
+                        | relationalExpression EQ equalityExpression
+                        | relationalExpression NE equalityExpression;
+
+relationalExpression ::= additiveExpression
+                        | additiveExpression LT relationalExpression
+                        | additiveExpression LE relationalExpression
+                        | additiveExpression GT relationalExpression
+                        | additiveExpression GE relationalExpression;
+
+additiveExpression ::= term
+                | term PLUS additiveExpression
+                | term MINUS additiveExpression;
+
+term ::= factor
+        | factor STAR term
+        | factor SLASH term;
+
+factor ::= LPAREN expression RPAREN
+            | unaryOp factor
+            | INTLIT
+            | variable;
+
+unaryOp ::= MINUS;
+
+variable ::= IDENT
+            | variable LBRACK expression RBRACK;
+
+declarationList ::= declaration declarationList
+                    | empty;
+
+declaration ::= VAR IDENT COLON type SEMIC;
+
+parameterList ::= parameter COMMA parameterList
+                    | parameter;
+
+parameter ::= IDENT COLON type
+            | REF IDENT COLON type;
+
+typeDef ::= TYPE IDENT EQ type SEMIC;
+
+type ::= ARRAY LBRACK INTLIT RBRACK OF type
+        | IDENT;
+
+empty ::= ;
