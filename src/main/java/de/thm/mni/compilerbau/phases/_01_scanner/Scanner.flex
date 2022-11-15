@@ -46,7 +46,7 @@ else { return symbol(Sym.ELSE);}
 proc {return symbol(Sym.PROC);}
 var {return symbol(Sym.VAR);}
 ref {return symbol(Sym.REF);}
-type {return symbol(Sym.TYPE, yytext());}
+type {return symbol(Sym.TYPE);}
 of {return symbol(Sym.OF);}
 \- {return symbol(Sym.MINUS);}
 \+ {return symbol(Sym.PLUS);}
