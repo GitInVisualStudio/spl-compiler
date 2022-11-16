@@ -1,0 +1,10 @@
+type myArray = array [10] of int;
+
+proc foo(ref i: myArray) {
+    var bar: myArray;
+}
+
+proc main() {
+    var value: myArray;
+    foo(value);
+}

@@ -31,16 +31,16 @@ public class TableBuilder extends DoNothingVisitor {
     }
 
     public SymbolTable buildSymbolTable(Program program) {
+        program.accept(this);
+
         Optional<GlobalDeclaration> main = program.declarations.stream().filter(x -> x.name.equals(new Identifier("main"))).findAny();
+
         if (main.isEmpty())
             throw SplError.MainIsMissing();
+
         if (!(main.get() instanceof ProcedureDeclaration))
             throw SplError.MainIsNotAProcedure();
 
-        program.accept(this);
-
-        // pls don't ask me why
-        // everything about main's requirements is checked upfront, except its parameter count
         ProcedureDeclaration dec = (ProcedureDeclaration) main.get();
         if (dec.parameters.size() != 0)
             throw SplError.MainMustNotHaveParameters();
@@ -74,6 +74,8 @@ public class TableBuilder extends DoNothingVisitor {
     @Override
     public void visit(ParameterDeclaration parameterDeclaration) {
         parameterDeclaration.typeExpression.accept(this);
+        if (parameterDeclaration.typeExpression.dataType instanceof ArrayType && !parameterDeclaration.isReference)
+            throw SplError.MustBeAReferenceParameter(parameterDeclaration.position, parameterDeclaration.name);
         table.enter(parameterDeclaration.name, new VariableEntry(parameterDeclaration.typeExpression.dataType, parameterDeclaration.isReference));
     }
 

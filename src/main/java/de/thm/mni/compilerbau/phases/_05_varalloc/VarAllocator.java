@@ -2,24 +2,27 @@ package de.thm.mni.compilerbau.phases._05_varalloc;
 
 import de.thm.mni.compilerbau.CommandLineOptions;
 import de.thm.mni.compilerbau.absyn.*;
-import de.thm.mni.compilerbau.table.ParameterType;
-import de.thm.mni.compilerbau.table.ProcedureEntry;
-import de.thm.mni.compilerbau.table.SymbolTable;
-import de.thm.mni.compilerbau.table.VariableEntry;
+import de.thm.mni.compilerbau.absyn.visitor.DoNothingVisitor;
+import de.thm.mni.compilerbau.table.*;
 import de.thm.mni.compilerbau.utils.*;
 
+import javax.swing.text.html.Option;
+import java.net.Proxy;
 import java.util.*;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * This class is used to calculate the memory needed for variables and stack frames of the currently compiled SPL program.
  * Those value have to be stored in their corresponding fields in the {@link ProcedureEntry}, {@link VariableEntry} and
  * {@link ParameterType} classes.
  */
-public class VarAllocator {
+public class VarAllocator extends DoNothingVisitor {
     public static final int REFERENCE_BYTESIZE = 4;
 
     private final CommandLineOptions options;
+    private int varOffset, maxCalleSize;
+    private SymbolTable table;
 
     /**
      * @param options The options passed to the compiler
@@ -29,12 +32,83 @@ public class VarAllocator {
     }
 
     public void allocVars(Program program, SymbolTable table) {
-        //TODO (assignment 5): Allocate stack slots for all parameters and local variables
+        this.table = table;
+        program.accept(this);
+        if (options.phaseOption == options.phaseOption.VARS)
+            formatVars(program, table);
+    }
 
-        throw new NotImplemented();
+    @Override
+    public void visit(Program program) {
+        program.declarations.forEach(x -> x.accept(this));
+    }
 
-        //TODO: Uncomment this when the above exception is removed!
-        //if (showVarAlloc) formatVars(program, table);
+    @Override
+    public void visit(ProcedureDeclaration procedureDeclaration) {
+        ProcedureEntry proc = (ProcedureEntry) table.lookup(procedureDeclaration.name);
+
+        StackLayout layout = proc.stackLayout;
+        SymbolTable global = table;
+        table = proc.localTable;
+
+        // also set the offset of the parameter entry
+        varOffset = 0;
+        proc.parameterTypes.forEach(x -> {
+            x.offset = varOffset;
+            varOffset += x.isReference ? REFERENCE_BYTESIZE : x.type.byteSize;
+        });
+        layout.argumentAreaSize = varOffset;
+
+        varOffset = 0;
+        procedureDeclaration.parameters.forEach(x -> x.accept(this));
+
+        varOffset = 0;
+        procedureDeclaration.variables.forEach(x -> x.accept(this));
+        layout.localVarAreaSize = varOffset;
+
+        maxCalleSize = 0;
+        procedureDeclaration.body.forEach(x -> x.accept(this));
+
+        layout.outgoingAreaSize = maxCalleSize;
+        table = global;
+    }
+
+    @Override
+    public void visit(WhileStatement whileStatement) {
+        whileStatement.body.accept(this);
+    }
+
+    @Override
+    public void visit(IfStatement ifStatement) {
+        ifStatement.thenPart.accept(this);
+        ifStatement.elsePart.accept(this);
+    }
+
+    @Override
+    public void visit(CompoundStatement compoundStatement) {
+        compoundStatement.statements.forEach(x -> x.accept(this));
+    }
+
+    @Override
+    public void visit(CallStatement callStatement) {
+        ProcedureEntry entry = (ProcedureEntry)table.lookup(callStatement.procedureName);
+        Integer argumentSize = entry.parameterTypes.stream().map(x -> x.isReference ? REFERENCE_BYTESIZE : x.type.byteSize).reduce(0, Integer::sum);
+        if (argumentSize > this.maxCalleSize)
+            this.maxCalleSize = argumentSize;
+    }
+
+    @Override
+    public void visit(ParameterDeclaration parameterDeclaration) {
+        VariableEntry entry = (VariableEntry) table.lookup(parameterDeclaration.name);
+        entry.offset = varOffset;
+        varOffset += entry.isReference ? REFERENCE_BYTESIZE : entry.type.byteSize;
+    }
+
+    @Override
+    public void visit(VariableDeclaration variableDeclaration) {
+        VariableEntry entry = (VariableEntry) table.lookup(variableDeclaration.name);
+        varOffset += entry.type.byteSize;
+        entry.offset = -varOffset;
     }
 
     /**

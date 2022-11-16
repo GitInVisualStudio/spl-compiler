@@ -108,7 +108,7 @@ proc main () {
 	ausgabe(3);
 
    // Compound and Empty-Statement
-
+    {;;;;;;}
 
 	i := 0;
 	// While-Loop 

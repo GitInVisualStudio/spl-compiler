@@ -1,0 +1,6 @@
+type myArray = array [5] of int;
+
+proc main() {
+    var bar : myArray;
+    bar[0 > 5] := 2;
+}
