@@ -80,7 +80,7 @@ public class ProcedureBodyChecker extends DoNothingVisitor {
         for (int i = 0; i < callStatement.arguments.size(); i++) {
             Expression argument = callStatement.arguments.get(i);
             if (argument.dataType != entry.parameterTypes.get(i).type)
-                throw SplError.ArgumentTypeMismatch(callStatement.position, callStatement.procedureName, i + 1, entry.parameterTypes.get(i).type, argument.dataType);
+                throw SplError.ArgumentTypeMismatch(argument.position, callStatement.procedureName, i + 1, entry.parameterTypes.get(i).type, argument.dataType);
             if (entry.parameterTypes.get(i).isReference && !(argument instanceof VariableExpression))
                throw SplError.ArgumentMustBeAVariable(argument.position, callStatement.procedureName, i + 1);
         }

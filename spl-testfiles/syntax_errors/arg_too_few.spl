@@ -1,0 +1,7 @@
+proc foo(i: int, j: int) {
+    ;
+}
+
+proc main() {
+    foo(0);
+}
