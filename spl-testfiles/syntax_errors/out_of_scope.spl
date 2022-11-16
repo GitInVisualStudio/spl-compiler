@@ -1,0 +1,7 @@
+proc foo(a: int) {
+    ;
+}
+
+proc main() {
+    a := 5;
+}

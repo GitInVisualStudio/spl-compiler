@@ -1,0 +1,6 @@
+proc main() {
+    ;
+}
+
+type myType = int;
+type myType = myType;

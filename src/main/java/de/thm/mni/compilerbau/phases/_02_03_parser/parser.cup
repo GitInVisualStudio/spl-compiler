@@ -170,7 +170,7 @@ arrayAccess ::= variable:array LBRACK expression:index RBRACK {:RESULT = new Arr
 declarationList ::= variableDeclaration:head declarationList:tail {:RESULT = cons(head, tail);:}
                     | empty {:RESULT = nil();:};
 
-variableDeclaration ::= VAR IDENT:name COLON typeExpression:typeExpr SEMIC {:RESULT = new VariableDeclaration(new Position(nameleft, nameright), name, typeExpr);:};
+variableDeclaration ::= VAR:var IDENT:name COLON typeExpression:typeExpr SEMIC {:RESULT = new VariableDeclaration(new Position(varleft, varright), name, typeExpr);:};
 
 parameterList ::= parameterDeclaration:head COMMA parameterList:tail {:RESULT = cons(head, tail);:}
                     | parameterDeclaration:head {:RESULT = cons(head, nil());:};
@@ -178,7 +178,7 @@ parameterList ::= parameterDeclaration:head COMMA parameterList:tail {:RESULT = 
 parameterDeclaration ::= IDENT:name COLON typeExpression:typeExpr {:RESULT = new ParameterDeclaration(new Position(nameleft, nameright), name, typeExpr, false);:}
             | REF IDENT:name COLON typeExpression:typeExpr {:RESULT = new ParameterDeclaration(new Position(nameleft, nameright), name, typeExpr, true);:};
 
-typeDeclaration ::= TYPE IDENT:name EQ typeExpression:expr SEMIC {:RESULT = new TypeDeclaration(new Position(nameleft, nameright), name, expr);:};
+typeDeclaration ::= TYPE:type IDENT:name EQ typeExpression:expr SEMIC {:RESULT = new TypeDeclaration(new Position(typeleft, typeright), name, expr);:};
 
 typeExpression ::= arrayTypeExpression:array {:RESULT = array;:}
         | namedTypeExpression:named {:RESULT = named;:};

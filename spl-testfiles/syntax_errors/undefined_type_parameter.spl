@@ -1,0 +1,11 @@
+
+proc foo(k: myType) {
+    ;
+}
+
+type myType = int;
+
+proc main() {
+    var i: myType;
+}
+

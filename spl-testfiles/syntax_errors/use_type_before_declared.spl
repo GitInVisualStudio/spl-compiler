@@ -1,0 +1,9 @@
+proc foo(x: myInt) {
+
+}
+
+type myInt = int;
+
+proc main() {
+    foo(5);
+}

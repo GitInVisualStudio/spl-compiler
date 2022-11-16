@@ -2,7 +2,7 @@
   <configuration default="false" name="Main" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="de.thm.mni.compilerbau.Main" />
     <module name="spl" />
-    <option name="PROGRAM_PARAMETERS" value="--absyn spl-testfiles/runtime_tests/bigtest.spl" />
+    <option name="PROGRAM_PARAMETERS" value="--semant spl-testfiles/syntax_errors/main_arguments.spl" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

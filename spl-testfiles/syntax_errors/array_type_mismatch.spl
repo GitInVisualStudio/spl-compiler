@@ -1,0 +1,9 @@
+type topArray = array [5] of int;
+type myArray = array [5] of topArray;
+
+proc main() {
+    var foo : topArray;
+    var bar : myArray;
+
+    bar[0] := foo;
+}
