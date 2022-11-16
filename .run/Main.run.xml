@@ -2,7 +2,7 @@
   <configuration default="false" name="Main" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="de.thm.mni.compilerbau.Main" />
     <module name="spl" />
-    <option name="PROGRAM_PARAMETERS" value="--vars spl-testfiles/runtime_tests/array.spl" />
+    <option name="PROGRAM_PARAMETERS" value="spl-testfiles/runtime_tests/acker.spl" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

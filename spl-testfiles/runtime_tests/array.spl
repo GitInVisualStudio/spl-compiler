@@ -1,10 +1,15 @@
 type myArray = array [10] of int;
 
-proc foo(ref i: myArray) {
-    var bar: myArray;
+proc foo(i: int) {
+    i := 5;
 }
 
 proc main() {
-    var value: myArray;
-    foo(value);
+    var k : myArray;
+    var i : int;
+    i := 0;
+    while (i < 10) {
+        k[i] := i * 2;
+        i := k[i] + 1;
+    }
 }

@@ -58,7 +58,7 @@ class CodePrinter {
     }
 
     void emitExport(String label) {
-        outputFile.printf("\t.export\t%s\n", label);
+        outputFile.printf("\n\t.export\t%s\n", label);
     }
 
     void emit(String str) {
