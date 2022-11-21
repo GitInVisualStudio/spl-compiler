@@ -65,7 +65,7 @@ public class TableBuilder extends DoNothingVisitor {
         ProcedureEntry entry = new ProcedureEntry(table, parameterTypes);
 
         table = global;
-        table.enter(procedureDeclaration.name, entry);
+        table.enter(procedureDeclaration.name, entry, SplError.RedeclarationAsProcedure(procedureDeclaration.position, procedureDeclaration.name));
 
         if (options.phaseOption == options.phaseOption.TABLES)
             printSymbolTableAtEndOfProcedure(procedureDeclaration.name, entry);
@@ -76,6 +76,8 @@ public class TableBuilder extends DoNothingVisitor {
         parameterDeclaration.typeExpression.accept(this);
         if (parameterDeclaration.typeExpression.dataType instanceof ArrayType && !parameterDeclaration.isReference)
             throw SplError.MustBeAReferenceParameter(parameterDeclaration.position, parameterDeclaration.name);
+        if (table.find(parameterDeclaration.name).isPresent())
+            throw SplError.RedeclarationAsParameter(parameterDeclaration.position, parameterDeclaration.name);
         table.enter(parameterDeclaration.name, new VariableEntry(parameterDeclaration.typeExpression.dataType, parameterDeclaration.isReference));
     }
 

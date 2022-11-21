@@ -153,7 +153,10 @@ public class ProcedureBodyChecker extends DoNothingVisitor {
         if (arrayAccess.index.dataType != PrimitiveType.intType)
             throw SplError.IndexingWithNonInteger(arrayAccess.position);
         arrayAccess.array.accept(this);
-        arrayAccess.dataType = ((ArrayType)arrayAccess.array.dataType).baseType;
+        if (arrayAccess.array.dataType instanceof ArrayType)
+            arrayAccess.dataType = ((ArrayType)arrayAccess.array.dataType).baseType;
+        else
+            throw SplError.IndexingNonArray(arrayAccess.position);
     }
 
 }

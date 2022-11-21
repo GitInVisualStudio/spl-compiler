@@ -92,8 +92,8 @@ globalDeclarationList ::= globalDeclaration:head globalDeclarationList:tail {:RE
 globalDeclaration ::= procedureDeclaration:procedure {:RESULT = procedure;:}
                         | typeDeclaration:type {:RESULT = type;:};
 
-procedureDeclaration ::= PROC IDENT:name LPAREN parameterList:parameter RPAREN LCURL declarationList:variables statementList:body RCURL {:RESULT = new ProcedureDeclaration(new Position(nameleft, nameright), name, parameter, variables, body);:}
-            | PROC IDENT:name LPAREN RPAREN LCURL declarationList:variables statementList:body RCURL  {:RESULT = new ProcedureDeclaration(new Position(nameleft, nameright), name, nil(), variables, body);:};
+procedureDeclaration ::= PROC:proc IDENT:name LPAREN parameterList:parameter RPAREN LCURL declarationList:variables statementList:body RCURL {:RESULT = new ProcedureDeclaration(new Position(procleft, procright), name, parameter, variables, body);:}
+            | PROC:proc IDENT:name LPAREN RPAREN LCURL declarationList:variables statementList:body RCURL  {:RESULT = new ProcedureDeclaration(new Position(procleft, procright), name, nil(), variables, body);:};
 
 
 statementList ::= statement:head statementList:tail {:RESULT = cons(head, tail);:}
