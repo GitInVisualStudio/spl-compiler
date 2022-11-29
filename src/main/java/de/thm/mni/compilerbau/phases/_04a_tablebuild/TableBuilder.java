@@ -5,6 +5,7 @@ import de.thm.mni.compilerbau.absyn.*;
 import de.thm.mni.compilerbau.absyn.visitor.DoNothingVisitor;
 import de.thm.mni.compilerbau.table.*;
 import de.thm.mni.compilerbau.types.ArrayType;
+import de.thm.mni.compilerbau.types.RecordType;
 import de.thm.mni.compilerbau.types.Type;
 import de.thm.mni.compilerbau.utils.NotImplemented;
 import de.thm.mni.compilerbau.utils.SplError;
@@ -76,6 +77,8 @@ public class TableBuilder extends DoNothingVisitor {
         parameterDeclaration.typeExpression.accept(this);
         if (parameterDeclaration.typeExpression.dataType instanceof ArrayType && !parameterDeclaration.isReference)
             throw SplError.MustBeAReferenceParameter(parameterDeclaration.position, parameterDeclaration.name);
+        if (parameterDeclaration.typeExpression.dataType instanceof RecordType && !parameterDeclaration.isReference)
+            throw SplError.MustBeAReferenceParameter(parameterDeclaration.position, parameterDeclaration.name);
         if (table.find(parameterDeclaration.name).isPresent())
             throw SplError.RedeclarationAsParameter(parameterDeclaration.position, parameterDeclaration.name);
         table.enter(parameterDeclaration.name, new VariableEntry(parameterDeclaration.typeExpression.dataType, parameterDeclaration.isReference));
@@ -110,6 +113,15 @@ public class TableBuilder extends DoNothingVisitor {
             throw SplError.RedeclarationAsType(typeDeclaration.position, typeDeclaration.name);
         typeDeclaration.typeExpression.accept(this);
         table.enter(typeDeclaration.name, new TypeEntry(typeDeclaration.typeExpression.dataType), SplError.RedeclarationAsType(typeDeclaration.position, typeDeclaration.name));
+    }
+
+    @Override
+    public void visit(RecordTypeExpression recordTypeExpression) {
+        for (final VariableDeclaration var : recordTypeExpression.fields)
+            if (recordTypeExpression.fields.stream().filter(x -> x.name.equals(var.name)).count() != 1)
+                throw SplError.FieldAlreadyExists(var.position, var.name);
+        recordTypeExpression.fields.forEach(x -> x.typeExpression.accept(this));
+        recordTypeExpression.dataType = new RecordType(recordTypeExpression.fields);
     }
 
     /**

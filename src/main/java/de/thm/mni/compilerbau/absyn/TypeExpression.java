@@ -9,7 +9,7 @@ import de.thm.mni.compilerbau.types.Type;
  * They behave like a formula representing a concrete semantic {@link Type} which has to be calculated
  * during phase 4.
  */
-sealed public abstract class TypeExpression extends Node permits ArrayTypeExpression, NamedTypeExpression {
+sealed public abstract class TypeExpression extends Node permits ArrayTypeExpression, NamedTypeExpression, RecordTypeExpression {
     public Type dataType = null;
 
     public TypeExpression(Position position) {

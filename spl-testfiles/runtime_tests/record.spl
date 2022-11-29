@@ -1,0 +1,35 @@
+type myRecord = record {
+    value: int,
+    inner: record { a: int}
+};
+
+proc test(ref r: record {value: int, inner: record {a: int}} ) {
+    printi(r.value);
+    printc('\n');
+    printi(r.inner.a);
+    printc('\n');
+    printc('\n');
+    r.value := 3;
+    r.inner.a := 4;
+    printi(r.value);
+    printi(r.inner.a);
+    printc('\n');
+    printc('\n');
+}
+
+proc main() {
+	var r : myRecord;
+	r.value := 1;
+	r.inner.a := 2;
+    printi(r.value);
+    printi(r.inner.a);
+    printc('\n');
+    printc('\n');
+
+    test(r);
+
+    printi(r.value);
+    printi(r.inner.a);
+    printc('\n');
+    printc('\n');
+}

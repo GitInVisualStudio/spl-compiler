@@ -4,10 +4,14 @@ import de.thm.mni.compilerbau.CommandLineOptions;
 import de.thm.mni.compilerbau.absyn.*;
 import de.thm.mni.compilerbau.absyn.visitor.DoNothingVisitor;
 import de.thm.mni.compilerbau.phases._05_varalloc.StackLayout;
+import de.thm.mni.compilerbau.phases._05_varalloc.VarAllocator;
+import de.thm.mni.compilerbau.table.ParameterType;
 import de.thm.mni.compilerbau.table.ProcedureEntry;
 import de.thm.mni.compilerbau.table.SymbolTable;
 import de.thm.mni.compilerbau.table.VariableEntry;
 import de.thm.mni.compilerbau.types.ArrayType;
+import de.thm.mni.compilerbau.types.PrimitiveType;
+import de.thm.mni.compilerbau.types.RecordType;
 import de.thm.mni.compilerbau.utils.NotImplemented;
 import de.thm.mni.compilerbau.utils.SplError;
 import java_cup.runtime.Symbol;
@@ -15,6 +19,7 @@ import java_cup.runtime.Symbol;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 
 /**
  * This class is used to generate the assembly code for the compiled program.
@@ -194,7 +199,8 @@ public class CodeGenerator extends DoNothingVisitor {
         ProcedureEntry proc = (ProcedureEntry)table.lookup(callStatement.procedureName);
         for (int i = 0; i < callStatement.arguments.size(); i++) {
             Expression e = callStatement.arguments.get(i);
-            shouldCopy = !proc.parameterTypes.get(i).isReference;
+            ParameterType type = proc.parameterTypes.get(i);
+            shouldCopy = !type.isReference;
             e.accept(this);
             output.emitInstruction("stw", register, new Register(29), proc.parameterTypes.get(i).offset, String.format("store argument #%d", i));
         }
@@ -221,6 +227,24 @@ public class CodeGenerator extends DoNothingVisitor {
 
         popReg();
         output.emitInstruction("add", register, register, offset);
+    }
+
+    @Override
+    public void visit(FieldAccess fieldAccess) {
+        super.visit(fieldAccess);
+        RecordType type = (RecordType) fieldAccess.variable.dataType;
+        boolean prev = shouldCopy;
+
+        fieldAccess.variable.accept(this);
+
+        int offset = 0;
+        for (VariableDeclaration var : type.fields) {
+            if (var.name.equals(fieldAccess.field) && offset != 0)
+                output.emitInstruction("add", register, register, offset);
+            offset += var.typeExpression.dataType.byteSize;
+        }
+
+        shouldCopy = prev;
     }
 
     @Override

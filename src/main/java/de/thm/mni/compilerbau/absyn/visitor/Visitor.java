@@ -45,4 +45,8 @@ public interface Visitor {
     void visit(VariableExpression variableExpression);
 
     void visit(WhileStatement whileStatement);
+
+    void visit(RecordTypeExpression recordTypeExpression);
+
+    void visit(FieldAccess fieldAccess);
 }

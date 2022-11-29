@@ -36,4 +36,14 @@ public class VariableDeclaration extends Node {
     public void accept(Visitor visitor) {
         visitor.visit(this);
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null || getClass() != obj.getClass())
+            return false;
+        VariableDeclaration other = (VariableDeclaration) obj;
+        return other.typeExpression.dataType.equals(typeExpression.dataType) && other.name.equals(this.name);
+    }
 }

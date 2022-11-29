@@ -52,6 +52,10 @@ public class SplError extends RuntimeException {
         return new SplError(107, position, "redeclaration of %s as variable", name);
     }
 
+    public static SplError FieldAlreadyExists(Position position, Identifier field) {
+        return new SplError(107, position, "field %s already exists", field);
+    }
+
     public static SplError IllegalAssignment(Position position, Type left, Type right) {
         return new SplError(108, position, "illegal assignment '<%s> := <%s>'", left, right);
     }
@@ -106,6 +110,14 @@ public class SplError extends RuntimeException {
 
     public static SplError NotAVariable(Position position, Identifier name) {
         return new SplError(122, position, "%s is not a variable", name);
+    }
+
+    public static SplError NotARecord(Position position, Identifier name) {
+        return new SplError(122, position, "%s is not a record", name);
+    }
+
+    public static SplError NotAField(Position position, Identifier name) {
+        return new SplError(122, position, "%s is not field", name);
     }
 
     public static SplError IndexingNonArray(Position position) {

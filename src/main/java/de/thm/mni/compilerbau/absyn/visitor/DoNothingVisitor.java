@@ -84,6 +84,15 @@ public class DoNothingVisitor implements Visitor {
     }
 
     @Override
+    public void visit(RecordTypeExpression recordTypeExpression) {
+    }
+
+    @Override
+    public void visit(FieldAccess fieldAccess) {
+
+    }
+
+    @Override
     public void visit(UnaryExpression unaryExpression) {
     }
 }

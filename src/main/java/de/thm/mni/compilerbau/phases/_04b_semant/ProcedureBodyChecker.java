@@ -6,6 +6,7 @@ import de.thm.mni.compilerbau.absyn.visitor.DoNothingVisitor;
 import de.thm.mni.compilerbau.table.*;
 import de.thm.mni.compilerbau.types.ArrayType;
 import de.thm.mni.compilerbau.types.PrimitiveType;
+import de.thm.mni.compilerbau.types.RecordType;
 import de.thm.mni.compilerbau.types.Type;
 import de.thm.mni.compilerbau.utils.NotImplemented;
 import de.thm.mni.compilerbau.utils.SplError;
@@ -79,7 +80,7 @@ public class ProcedureBodyChecker extends DoNothingVisitor {
 
         for (int i = 0; i < callStatement.arguments.size(); i++) {
             Expression argument = callStatement.arguments.get(i);
-            if (argument.dataType != entry.parameterTypes.get(i).type)
+            if (!argument.dataType.equals(entry.parameterTypes.get(i).type))
                 throw SplError.ArgumentTypeMismatch(argument.position, callStatement.procedureName, i + 1, entry.parameterTypes.get(i).type, argument.dataType);
             if (entry.parameterTypes.get(i).isReference && !(argument instanceof VariableExpression))
                throw SplError.ArgumentMustBeAVariable(argument.position, callStatement.procedureName, i + 1);
@@ -99,7 +100,7 @@ public class ProcedureBodyChecker extends DoNothingVisitor {
         binaryExpression.leftOperand.accept(this);
         binaryExpression.rightOperand.accept(this);
         binaryExpression.dataType = binaryExpression.operator.isArithmetic() ? PrimitiveType.intType : PrimitiveType.boolType;
-        if (binaryExpression.leftOperand.dataType != binaryExpression.rightOperand.dataType)
+        if (!binaryExpression.leftOperand.dataType.equals(binaryExpression.rightOperand.dataType))
             throw SplError.NoSuchOperator(binaryExpression.position,
                     binaryExpression.operator,
                     binaryExpression.leftOperand.dataType,
@@ -126,10 +127,13 @@ public class ProcedureBodyChecker extends DoNothingVisitor {
         assignStatement.target.accept(this);
         assignStatement.value.accept(this);
 
+        if (assignStatement.target.dataType instanceof RecordType)
+            throw SplError.IllegalAssignment(assignStatement.position, assignStatement.target.dataType, assignStatement.value.dataType);
+
         if (assignStatement.target.dataType instanceof ArrayType)
             throw SplError.IllegalAssignmentToArray(assignStatement.position);
 
-        if (assignStatement.target.dataType != assignStatement.value.dataType)
+        if (!assignStatement.target.dataType.equals(assignStatement.value.dataType))
             throw SplError.IllegalAssignment(assignStatement.position, assignStatement.target.dataType, assignStatement.value.dataType);
     }
 
@@ -159,4 +163,15 @@ public class ProcedureBodyChecker extends DoNothingVisitor {
             throw SplError.IndexingNonArray(arrayAccess.position);
     }
 
+    @Override
+    public void visit(FieldAccess fieldAccess) {
+        fieldAccess.variable.accept(this);
+        if (!(fieldAccess.variable.dataType instanceof RecordType))
+            throw SplError.NotARecord(fieldAccess.position, fieldAccess.field);
+        RecordType type = (RecordType) fieldAccess.variable.dataType;
+        Optional<VariableDeclaration> field = type.fields.stream().filter(x -> x.name.equals(fieldAccess.field)).findFirst();
+        if (field.isEmpty())
+            throw SplError.NotAField(fieldAccess.position, fieldAccess.field);
+        fieldAccess.dataType = field.get().typeExpression.dataType;
+    }
 }

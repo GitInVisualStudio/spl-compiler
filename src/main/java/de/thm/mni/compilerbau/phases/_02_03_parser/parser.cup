@@ -42,8 +42,8 @@ parser code {:
 terminal LBRACK, RBRACK, LPAREN, RPAREN, LCURL, RCURL;         //Braces, parenthesis, brackets
 terminal LT, LE, GT, GE, NE, EQ;                               //Comparison operators
 terminal PLUS, MINUS, STAR, SLASH;                             //Arithmetic operators
-terminal ASGN, COMMA, COLON, SEMIC;                            //Other delimiters
-terminal TYPE, PROC, ARRAY, OF, REF, VAR, IF, ELSE, WHILE;     //Keywords
+terminal ASGN, COMMA, COLON, SEMIC, DOT;                            //Other delimiters
+terminal TYPE, PROC, ARRAY, OF, REF, VAR, IF, ELSE, WHILE, RECORD;     //Keywords
 
 terminal Identifier IDENT;    //Identifiers
 terminal Integer INTLIT;      //Integer literals
@@ -81,6 +81,10 @@ non terminal TypeDeclaration typeDeclaration;
 non terminal TypeExpression typeExpression;
 non terminal NamedTypeExpression namedTypeExpression;
 non terminal ArrayTypeExpression arrayTypeExpression;
+non terminal RecordTypeExpression recordTypeExpression;
+non terminal List<VariableDeclaration> fieldList;
+non terminal VariableDeclaration fieldDeclaration;
+non terminal FieldAccess fieldAccess;
 non terminal empty;
 
 start with program;
@@ -162,7 +166,10 @@ intLiteral ::= INTLIT:value {:RESULT = new IntLiteral(new Position(valueleft, va
 unaryExpression ::= MINUS:op factor:operand {:RESULT = new UnaryExpression(new Position(opleft, opright), UnaryExpression.Operator.MINUS, operand);:};
 
 variable ::= namedVariable:named {:RESULT = named;:}
-            | arrayAccess:array {:RESULT = array;:};
+            | arrayAccess:array {:RESULT = array;:}
+            | fieldAccess:field {:RESULT = field;:};
+
+fieldAccess ::= variable:access DOT IDENT:field {:RESULT = new FieldAccess(new Position(accessleft, accessright), access, field);:};
 
 namedVariable ::= IDENT:name {:RESULT = new NamedVariable(new Position(nameleft, nameright), name);:};
 arrayAccess ::= variable:array LBRACK expression:index RBRACK {:RESULT = new ArrayAccess(new Position(arrayleft, arrayright), array, index);:};
@@ -181,9 +188,16 @@ parameterDeclaration ::= IDENT:name COLON typeExpression:typeExpr {:RESULT = new
 typeDeclaration ::= TYPE:type IDENT:name EQ typeExpression:expr SEMIC {:RESULT = new TypeDeclaration(new Position(typeleft, typeright), name, expr);:};
 
 typeExpression ::= arrayTypeExpression:array {:RESULT = array;:}
-        | namedTypeExpression:named {:RESULT = named;:};
+        | namedTypeExpression:named {:RESULT = named;:}
+        | recordTypeExpression:record {:RESULT = record;:};
 
 namedTypeExpression ::= IDENT:name {:RESULT = new NamedTypeExpression(new Position(nameleft, nameright), name);:};
 arrayTypeExpression ::= ARRAY:array LBRACK INTLIT:size RBRACK OF typeExpression:baseType {:RESULT = new ArrayTypeExpression(new Position(arrayleft, arrayright), size, baseType);:};
+recordTypeExpression ::= RECORD:rec LCURL fieldList:fields RCURL {:RESULT = new RecordTypeExpression(new Position(recleft, recright), fields);:};
+
+fieldList ::= fieldDeclaration:head COMMA fieldList:tail {:RESULT = cons(head, tail);:}
+                    | fieldDeclaration:head {:RESULT = cons(head, nil());:};
+
+fieldDeclaration ::= IDENT:name COLON typeExpression:typeExpr {:RESULT = new VariableDeclaration(new Position(nameleft, nameright), name, typeExpr);:};
 
 empty ::= ;
