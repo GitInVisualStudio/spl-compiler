@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Main" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="de.thm.mni.compilerbau.Main" />
-    <module name="spl" />
-    <option name="PROGRAM_PARAMETERS" value="spl-testfiles/runtime_tests/record.spl" />
+    <module name="spl-compiler" />
+    <option name="PROGRAM_PARAMETERS" value="spl-testfiles/runtime_tests/acker.spl" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

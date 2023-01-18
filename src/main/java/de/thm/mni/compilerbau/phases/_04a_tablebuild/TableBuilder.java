@@ -79,8 +79,6 @@ public class TableBuilder extends DoNothingVisitor {
             throw SplError.MustBeAReferenceParameter(parameterDeclaration.position, parameterDeclaration.name);
         if (parameterDeclaration.typeExpression.dataType instanceof RecordType && !parameterDeclaration.isReference)
             throw SplError.MustBeAReferenceParameter(parameterDeclaration.position, parameterDeclaration.name);
-        if (table.find(parameterDeclaration.name).isPresent())
-            throw SplError.RedeclarationAsParameter(parameterDeclaration.position, parameterDeclaration.name);
         table.enter(parameterDeclaration.name, new VariableEntry(parameterDeclaration.typeExpression.dataType, parameterDeclaration.isReference));
     }
 

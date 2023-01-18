@@ -4,22 +4,16 @@ import de.thm.mni.compilerbau.CommandLineOptions;
 import de.thm.mni.compilerbau.absyn.*;
 import de.thm.mni.compilerbau.absyn.visitor.DoNothingVisitor;
 import de.thm.mni.compilerbau.phases._05_varalloc.StackLayout;
-import de.thm.mni.compilerbau.phases._05_varalloc.VarAllocator;
 import de.thm.mni.compilerbau.table.ParameterType;
 import de.thm.mni.compilerbau.table.ProcedureEntry;
 import de.thm.mni.compilerbau.table.SymbolTable;
 import de.thm.mni.compilerbau.table.VariableEntry;
 import de.thm.mni.compilerbau.types.ArrayType;
-import de.thm.mni.compilerbau.types.PrimitiveType;
 import de.thm.mni.compilerbau.types.RecordType;
-import de.thm.mni.compilerbau.utils.NotImplemented;
 import de.thm.mni.compilerbau.utils.SplError;
-import java_cup.runtime.Symbol;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
 
 /**
  * This class is used to generate the assembly code for the compiled program.
@@ -30,8 +24,14 @@ public class CodeGenerator extends DoNothingVisitor {
     final CodePrinter output;
     private SymbolTable table;
     private Register register;
+
+    private static Register regNull = new Register(0),
+                regFP = new Register(25),
+                regSP = new Register(29),
+                regRET = new Register(31);
+
     private int label;
-    private boolean shouldCopy;
+    private boolean shouldLoad;
 
     /**
      * Initializes the code generator.
@@ -44,7 +44,7 @@ public class CodeGenerator extends DoNothingVisitor {
         this.output = new CodePrinter(output);
         this.register = new Register(8);
         this.label = -1;
-        this.shouldCopy = true;
+        this.shouldLoad = true;
     }
 
     public void generateCode(Program program, SymbolTable table) {
@@ -72,7 +72,7 @@ public class CodeGenerator extends DoNothingVisitor {
     @Override
     public void visit(UnaryExpression unaryExpression) {
         unaryExpression.operand.accept(this);
-        output.emitInstruction("sub", register, new Register(0), register);
+        output.emitInstruction("sub", register, regNull, register);
     }
 
     @Override
@@ -119,24 +119,24 @@ public class CodeGenerator extends DoNothingVisitor {
         output.emitExport(procedureDeclaration.name.toString());
         output.emitLabel(procedureDeclaration.name.toString());
 
-        ProcedureEntry entry = (ProcedureEntry)table.lookup(procedureDeclaration.name);
+        ProcedureEntry entry = (ProcedureEntry) table.lookup(procedureDeclaration.name);
 
         StackLayout layout = entry.stackLayout;
         SymbolTable globalTable = table;
 
         table = entry.localTable;
 
-        output.emitInstruction("sub", new Register(29), new Register(29), layout.frameSize(), "allocate frame");
-        output.emitInstruction("stw", new Register(25), new Register(29), layout.oldFramePointerOffset(), "save old frame pointer");
-        output.emitInstruction("add", new Register(25), new Register(29), layout.frameSize(), "setup new frame pointer");
-        output.emitInstruction("stw", new Register(31), new Register(25), layout.oldReturnAddressOffset(), "save return register");
+        output.emitInstruction("sub", regSP, regSP, layout.frameSize(), "allocate frame");
+        output.emitInstruction("stw", regFP, regSP, layout.oldFramePointerOffset(), "save old frame pointer");
+        output.emitInstruction("add", regFP, regSP, layout.frameSize(), "setup new frame pointer");
+        output.emitInstruction("stw", regRET, regFP, layout.oldReturnAddressOffset(), "save return register");
 
         procedureDeclaration.body.forEach(x -> x.accept(this));
 
-        output.emitInstruction("ldw", new Register(31), new Register(25), layout.oldReturnAddressOffset(), "restore return register");
-        output.emitInstruction("ldw", new Register(25), new Register(29), layout.oldFramePointerOffset(), "restore old frame pointer");
-        output.emitInstruction("add", new Register(29), new Register(29), layout.frameSize(), "release frame");
-        output.emitInstruction("jr", new Register(31), "return");
+        output.emitInstruction("ldw", regRET, regFP, layout.oldReturnAddressOffset(), "restore return register");
+        output.emitInstruction("ldw", regFP, regSP, layout.oldFramePointerOffset(), "restore old frame pointer");
+        output.emitInstruction("add", regSP, regSP, layout.frameSize(), "release frame");
+        output.emitInstruction("jr", regRET, "return");
 
         table = globalTable;
     }
@@ -196,15 +196,15 @@ public class CodeGenerator extends DoNothingVisitor {
 
     @Override
     public void visit(CallStatement callStatement) {
-        ProcedureEntry proc = (ProcedureEntry)table.lookup(callStatement.procedureName);
+        ProcedureEntry proc = (ProcedureEntry) table.lookup(callStatement.procedureName);
         for (int i = 0; i < callStatement.arguments.size(); i++) {
             Expression e = callStatement.arguments.get(i);
             ParameterType type = proc.parameterTypes.get(i);
-            shouldCopy = !type.isReference;
+            shouldLoad = !type.isReference;
             e.accept(this);
-            output.emitInstruction("stw", register, new Register(29), proc.parameterTypes.get(i).offset, String.format("store argument #%d", i));
+            output.emitInstruction("stw", register, regSP, proc.parameterTypes.get(i).offset, String.format("store argument #%d", i));
         }
-        shouldCopy = true;
+        shouldLoad = true;
         output.emitInstruction("jal", callStatement.procedureName.toString());
     }
 
@@ -212,15 +212,15 @@ public class CodeGenerator extends DoNothingVisitor {
     public void visit(ArrayAccess arrayAccess) {
         arrayAccess.array.accept(this);
         Register index = pushReg();
-        boolean prevShouldCopy = shouldCopy;
-        shouldCopy = true;
+        boolean prevShouldLoad = shouldLoad;
+        shouldLoad = true;
         arrayAccess.index.accept(this);
-        shouldCopy = prevShouldCopy;
+        shouldLoad = prevShouldLoad;
         pushReg();
 
         // push array length
-        ArrayType type = (ArrayType)arrayAccess.array.dataType;
-        output.emitInstruction("add", register, new Register(0), type.arraySize);
+        ArrayType type = (ArrayType) arrayAccess.array.dataType;
+        output.emitInstruction("add", register, regNull, type.arraySize);
         output.emitInstruction("bgeu", index, register, "_indexError");
         Register offset = popReg();
         output.emitInstruction("mul", register, register, type.baseType.byteSize);
@@ -233,7 +233,7 @@ public class CodeGenerator extends DoNothingVisitor {
     public void visit(FieldAccess fieldAccess) {
         super.visit(fieldAccess);
         RecordType type = (RecordType) fieldAccess.variable.dataType;
-        boolean prev = shouldCopy;
+        boolean prev = shouldLoad;
 
         fieldAccess.variable.accept(this);
 
@@ -244,27 +244,27 @@ public class CodeGenerator extends DoNothingVisitor {
             offset += var.typeExpression.dataType.byteSize;
         }
 
-        shouldCopy = prev;
+        shouldLoad = prev;
     }
 
     @Override
     public void visit(VariableExpression variableExpression) {
         variableExpression.variable.accept(this);
-        if (shouldCopy)
+        if (shouldLoad)
             output.emitInstruction("ldw", register, register, 0);
     }
 
     @Override
     public void visit(NamedVariable namedVariable) {
         VariableEntry entry = (VariableEntry) table.lookup(namedVariable.name);
-        output.emitInstruction("add", register, new Register(25), entry.offset);
+        output.emitInstruction("add", register, regFP, entry.offset);
         if (entry.isReference)
             output.emitInstruction("ldw", register, register, 0);
     }
 
     @Override
     public void visit(IntLiteral intLiteral) {
-        output.emitInstruction("add", register, new Register(0), intLiteral.value);
+        output.emitInstruction("add", register, regNull, intLiteral.value);
     }
 
     /**
